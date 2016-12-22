@@ -27,7 +27,12 @@
     #Prepare VM config
     $vm = New-AzureRmVMConfig -VMName $Config.VMname -VMSize $Config.VMsize
     if ($Config.Image.Offer -in @("CentOS", "Ubuntu")){
-       $vm = Set-AzureRmVMOperatingSystem -VM $vm -Linux -ComputerName $Config.VMname -Credential $VMcred 
+       if ($Config.SSHPubKey){
+          $vm = Set-AzureRmVMOperatingSystem -VM $vm -Linux -ComputerName $Config.VMname -Credential $VMcred -DisablePasswordAuthentication
+          $vm = Add-AzureRmVMSshPublicKey -VM $vm -KeyData $Config.SSHPubKey -Path "/home/$($Config.VMuser)/.ssh/authorized_keys"
+       } else {
+          $vm = Set-AzureRmVMOperatingSystem -VM $vm -Linux -ComputerName $Config.VMname -Credential $VMcred
+       }
     } else {
        Write-Error "$($Config.Image.Offer) is not supported at this time"
        break
@@ -38,7 +43,7 @@
        $vm = Get-AzureRmVMImage -Location $AzureEnv.Location.Name.DisplayName `
                -PublisherName $Config.Image.PublisherName `
                -Offer $Config.Image.Offer `
-               -Skus $Config.Image.Skus |       
+               -Skus $Config.Image.Skus |
        Set-AzureRmVMSourceImage -VM $vm
     }
     #TODO Custom Image
